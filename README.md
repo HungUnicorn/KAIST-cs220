@@ -1,10 +1,6 @@
-#  Rust Programming
+# KAIST-CS220 Programming Principles in Rust
 
-A Rust repository demonstrating expertise in **systems programming**, **concurrent & parallel architectures**, **AST parsing & language design**, **arbitrary-precision mathematics**, and **idiomatic memory management**. 
-
-This codebase highlights mastery over Rust's ownership model, lifetime semantics, trait-based abstractions, and high-performance algorithms.
-
-> 📌 **Academic Context**: This repository is built on the curriculum of **KAIST CS220: Programming Principles**, demonstrating solutions across systems design, concurrency, memory safety, type systems, and program correctness.
+This repository is built on the curriculum of **KAIST CS220: Programming Principles**, demonstrating solutions across systems design, concurrency, memory safety, type systems, and program correctness.
 
 ---
 
