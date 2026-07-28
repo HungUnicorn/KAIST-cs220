@@ -26,7 +26,13 @@ pub enum DayOfWeek {
 ///
 /// `next_weekday(Thu)` is `Fri`; and `next_weekday(Fri)` is `Mon`.
 pub fn next_weekday(day: DayOfWeek) -> DayOfWeek {
-    todo!()
+    match day {
+        DayOfWeek::Mon => DayOfWeek::Tue,
+        DayOfWeek::Tue => DayOfWeek::Wed,
+        DayOfWeek::Wed => DayOfWeek::Thu,
+        DayOfWeek::Thu => DayOfWeek::Fri,
+        DayOfWeek::Fri | DayOfWeek::Sat | DayOfWeek::Sun => DayOfWeek::Mon,
+    }
 }
 
 /// Given a list of integers, returns its median (when sorted, the value in the middle position).
@@ -52,7 +58,15 @@ pub fn next_weekday(day: DayOfWeek) -> DayOfWeek {
 ///
 /// Returns `None` if the list is empty.
 pub fn median(values: Vec<isize>) -> Option<isize> {
-    todo!()
+    let n = values.len();
+    if n == 0 {
+        return None;
+    }
+
+    let mut sorted_values = values;
+    sorted_values.sort();
+
+    return Some(sorted_values[n / 2]);
 }
 
 /// Given a list of integers, returns its smallest mode (the value that occurs most often; a hash
@@ -60,7 +74,25 @@ pub fn median(values: Vec<isize>) -> Option<isize> {
 ///
 /// Returns `None` if the list is empty.
 pub fn mode(values: Vec<isize>) -> Option<isize> {
-    todo!()
+    let mut counts = HashMap::new();
+    for &val in &values {
+        *counts.entry(val).or_insert(0) += 1;
+    }
+
+    let mut max_count = 0;
+    let mut mode = None;
+
+    for (val, count) in counts {
+        if count > max_count {
+            max_count = count;
+            mode = Some(val);
+        } else if count == max_count {
+            if mode.is_none() || mode.unwrap() > val {
+                mode = Some(val);
+            }
+        }
+    }
+    mode
 }
 
 /// Converts the given string to Pig Latin. Use the rules below to translate normal English into Pig
@@ -83,7 +115,17 @@ pub fn mode(values: Vec<isize>) -> Option<isize> {
 ///
 /// You may assume the string only contains lowercase alphabets, and it contains at least one vowel.
 pub fn piglatin(input: String) -> String {
-    todo!()
+    if input.starts_with(['a', 'e', 'i', 'o', 'u']) {
+        return input + "hay";
+    }
+
+    let first_vowel_pos = input.find(['a', 'e', 'i', 'o', 'u']).unwrap();
+
+    format!(
+        "{}{}ay",
+        &input[first_vowel_pos..],
+        &input[..first_vowel_pos]
+    )
 }
 
 /// Converts HR commands to the organization table.
@@ -109,7 +151,45 @@ pub fn piglatin(input: String) -> String {
 ///
 /// See the test function for more details.
 pub fn organize(commands: Vec<String>) -> HashMap<String, HashSet<String>> {
-    todo!()
+    let mut result: HashMap<String, HashSet<String>> = HashMap::new();
+
+    for command in commands {
+        let words: Vec<&str> = command.split_whitespace().collect();
+        match words.as_slice() {
+            ["Add", person, "to", department] => {
+                let _ = result
+                    .entry(department.to_string())
+                    .or_default()
+                    .insert(person.to_string());
+            }
+            ["Remove", person, "from", department] => {
+                let _ = remove_person(&mut result, department, person);
+            }
+            ["Move", person, "from", dept1, "to", dept2] => {
+                if remove_person(&mut result, dept1, person) {
+                    let _ = result
+                        .entry(dept2.to_string())
+                        .or_default()
+                        .insert(person.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    result
+}
+
+fn remove_person(result: &mut HashMap<String, HashSet<String>>, dept: &str, person: &str) -> bool {
+    let Some(employees) = result.get_mut(dept) else {
+        return false;
+    };
+
+    let removed = employees.remove(person);
+    if employees.is_empty() {
+        let _unused = result.remove(dept);
+    }
+    removed
 }
 
 /// Events in a text editor.
@@ -130,5 +210,25 @@ pub enum TypeEvent {
 ///
 /// See the test function `test_editor` for examples.
 pub fn use_editor(events: Vec<TypeEvent>) -> String {
-    todo!()
+    let mut text = String::new();
+    let mut clipboard = String::new();
+
+    for event in events {
+        match event {
+            TypeEvent::Type(c) => {
+                text.push(c);
+            }
+            TypeEvent::Backspace => {
+                let _ = text.pop();
+            }
+            TypeEvent::Copy => {
+                clipboard = text.clone();
+            }
+            TypeEvent::Paste => {
+                text.push_str(&clipboard);
+            }
+        }
+    }
+
+    text
 }

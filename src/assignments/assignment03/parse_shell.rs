@@ -27,5 +27,37 @@
 ///
 /// See `test_shell` for more examples.
 pub fn parse_shell_command(command: &str) -> Vec<String> {
-    todo!()
+    let mut args = Vec::new();
+    let mut current_arg = String::new();
+    let mut in_quotes = false;
+    let mut has_arg = false;
+
+    for c in command.chars() {
+        match c {
+            '\'' => {
+                in_quotes = !in_quotes;
+                has_arg = true;
+            }
+            ' ' => {
+                if in_quotes {
+                    current_arg.push(c);
+                    has_arg = true;
+                } else if has_arg {
+                    args.push(current_arg);
+                    current_arg = String::new();
+                    has_arg = false;
+                }
+            }
+            _ => {
+                current_arg.push(c);
+                has_arg = true;
+            }
+        }
+    }
+
+    if has_arg {
+        args.push(current_arg);
+    }
+
+    args
 }
