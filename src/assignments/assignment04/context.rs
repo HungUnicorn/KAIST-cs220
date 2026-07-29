@@ -27,7 +27,32 @@ impl Context {
 
     /// Calculates the given expression. (We assume the absence of overflow.)
     pub fn calc_expression(&self, expression: &Expression) -> Result<f64> {
-        todo!("fill here")
+        match expression {
+            Expression::Num(value) => Ok(*value),
+            Expression::Variable(name) => {
+                let val = self
+                    .variables
+                    .get(name)
+                    .ok_or_else(|| anyhow!("undefined variable: {}", name))?;
+                Ok(*val)
+            }
+            Expression::BinOp { op, lhs, rhs } => {
+                let left_val = self.calc_expression(lhs)?;
+                let right_val = self.calc_expression(rhs)?;
+                match op {
+                    BinOp::Add => Ok(left_val + right_val),
+                    BinOp::Subtract => Ok(left_val - right_val),
+                    BinOp::Multiply => Ok(left_val * right_val),
+                    BinOp::Divide => {
+                        if right_val == 0.0 {
+                            bail!("division by zero");
+                        }
+                        Ok(left_val / right_val)
+                    }
+                    BinOp::Power => Ok(left_val.powf(right_val)),
+                }
+            }
+        }
     }
 
     /// Calculates the given command. (We assume the absence of overflow.)
