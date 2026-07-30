@@ -68,6 +68,16 @@ impl Context {
     ///
     /// After calculating commad `3 ^ 2` => Context's variables = `{($0,8),(v,1),($1,9)}`
     pub fn calc_command(&mut self, command: &Command) -> Result<(String, f64)> {
-        todo!("fill here")
+        let value = self.calc_expression(&command.expression)?;
+        let variable = match &command.variable {
+            Some(name) => name.clone(),
+            None => {
+                let name = format!("${}", self.anonymous_counter);
+                self.anonymous_counter += 1;
+                name
+            }
+        };
+        let _ = self.variables.insert(variable.clone(), value);
+        Ok((variable, value))
     }
 }
