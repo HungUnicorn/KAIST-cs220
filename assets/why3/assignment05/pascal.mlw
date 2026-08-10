@@ -32,8 +32,7 @@ module Pascal
       let new_row = Array.make (r+1) 1 in
       for c = 1 to r-1 do
         (* IMPORTANT: DON'T MODIFY THE ABOVE LINES *)
-        (* TODO: Replace `true` with your solution. Your solution MUST be a single line, at line 36. DON'T add more code above or below. *)
-        invariant { true  }
+        invariant { forall k. 0 <= k < c -> new_row[k] = comb r k }
         (* IMPORTANT: DON'T MODIFY THE BELOW LINES *)
         new_row[c] <- row[c-1] + row[c]
       done;
