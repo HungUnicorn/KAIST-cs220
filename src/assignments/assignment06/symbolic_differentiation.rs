@@ -5,9 +5,9 @@ use std::ops::*;
 
 /// Rational number represented by two isize, numerator and denominator.
 ///
-/// Each Rational number should be normalized so that `demoninator` is nonnegative and `numerator`
-/// and `demoninator` are coprime. See `normalize` for examples. As a corner case, 0 is represented
-/// by `Rational { numerator: 0, demoninator: 0 }`.
+/// Each Rational number should be normalized so that `denominator` is nonnegative and `numerator`
+/// and `denominator` are coprime. See `normalize` for examples. As a corner case, 0 is represented
+/// by `Rational { numerator: 0, denominator: 0 }`.
 ///
 /// For "natural use", it also overloads standard arithmetic operations, i.e, `+`, `-`, `*`, and
 /// `/`.
@@ -36,13 +36,48 @@ impl Rational {
             denominator,
         }
     }
+
+    fn normalize(self) -> Self {
+        if self.numerator == 0 {
+            return Rational {
+                numerator: 0,
+                denominator: 0,
+            };
+        }
+
+        let g = Self::gcd(self.numerator, self.denominator);
+        let mut num = self.numerator / g;
+        let mut den = self.denominator / g;
+
+        if den < 0 {
+            num = -num;
+            den = -den;
+        }
+
+        Self {
+            numerator: num,
+            denominator: den,
+        }
+    }
+
+    fn gcd(a: isize, b: isize) -> isize {
+        if b == 0 {
+            a.abs()
+        } else {
+            Self::gcd(b, a % b)
+        }
+    }
 }
 
 impl Add for Rational {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        todo!()
+        Self::new(
+            self.numerator * rhs.denominator + self.denominator * rhs.numerator,
+            self.denominator * rhs.denominator,
+        )
+        .normalize()
     }
 }
 
@@ -50,7 +85,11 @@ impl Mul for Rational {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        todo!()
+        Self::new(
+            self.numerator * rhs.numerator,
+            self.denominator * rhs.denominator,
+        )
+        .normalize()
     }
 }
 
@@ -58,7 +97,11 @@ impl Sub for Rational {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        todo!()
+        Self::new(
+            self.numerator * rhs.denominator - self.denominator * rhs.numerator,
+            self.denominator * rhs.denominator,
+        )
+        .normalize()
     }
 }
 
@@ -66,7 +109,11 @@ impl Div for Rational {
     type Output = Self;
 
     fn div(self, rhs: Self) -> Self::Output {
-        todo!()
+        Self::new(
+            self.numerator * rhs.denominator,
+            self.denominator * rhs.numerator,
+        )
+        .normalize()
     }
 }
 
@@ -84,7 +131,7 @@ pub trait Differentiable: Clone {
 impl Differentiable for Rational {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Constant_term_rule>
     fn diff(&self) -> Self {
-        todo!()
+        ZERO
     }
 }
 
@@ -108,30 +155,39 @@ pub enum SingletonPolynomial {
 impl SingletonPolynomial {
     /// Creates a new const polynomial.
     pub fn new_c(r: Rational) -> Self {
-        todo!()
+        Self::Const(r)
     }
 
     /// Creates a new polynomial.
     pub fn new_poly(coeff: Rational, power: Rational) -> Self {
-        todo!()
+        if coeff == ZERO {
+            Self::Const(ZERO)
+        } else if power == ZERO {
+            Self::Const(coeff)
+        } else {
+            Self::Polynomial { coeff, power }
+        }
     }
 }
 
 impl Differentiable for SingletonPolynomial {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Power_rule>
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            Self::Const(_) => Self::Const(ZERO),
+            Self::Polynomial { coeff, power } => Self::new_poly(*coeff * *power, *power - ONE),
+        }
     }
 }
 
-/// Expoential function.(`e^x`)
+/// Exponential function. (`e^x`)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Exp;
 
 impl Exp {
     /// Creates a new exponential function.
     pub fn new() -> Self {
-        todo!()
+        Self
     }
 }
 
@@ -144,13 +200,13 @@ impl Default for Exp {
 impl Differentiable for Exp {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Derivatives_of_exponential_and_logarithmic_functions>
     fn diff(&self) -> Self {
-        todo!()
+        *self
     }
 }
 
 /// Trigonometric functions.
 ///
-/// The trig fucntions carry their coefficents to be closed under differntiation.
+/// The trig functions carry their coefficients to be closed under differentiation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Trignometric {
     /// Sine function.
@@ -168,19 +224,22 @@ pub enum Trignometric {
 impl Trignometric {
     /// Creates a new sine function.
     pub fn new_sine(coeff: Rational) -> Self {
-        todo!()
+        Self::Sine { coeff }
     }
 
     /// Creates a new cosine function.
     pub fn new_cosine(coeff: Rational) -> Self {
-        todo!()
+        Self::Cosine { coeff }
     }
 }
 
 impl Differentiable for Trignometric {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Derivatives_of_trigonometric_functions>
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            Self::Sine { coeff } => Self::new_cosine(*coeff),
+            Self::Cosine { coeff } => Self::new_sine(MINUS_ONE * *coeff),
+        }
     }
 }
 
@@ -199,7 +258,12 @@ pub enum BaseFuncs {
 
 impl Differentiable for BaseFuncs {
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            Self::Const(c) => Self::Const(c.diff()),
+            Self::Poly(p) => Self::Poly(p.diff()),
+            Self::Exp(e) => Self::Exp(e.diff()),
+            Self::Trig(t) => Self::Trig(t.diff()),
+        }
     }
 }
 
@@ -222,14 +286,33 @@ pub enum ComplexFuncs<F> {
 
 impl<F: Differentiable> Differentiable for Box<F> {
     fn diff(&self) -> Self {
-        todo!()
+        Self::new((**self).diff())
     }
 }
 
 impl<F: Differentiable> Differentiable for ComplexFuncs<F> {
     /// HINT: Consult <https://en.wikipedia.org/wiki/Differentiation_rules#Elementary_rules_of_differentiation>
     fn diff(&self) -> Self {
-        todo!()
+        match self {
+            Self::Func(f) => Self::Func(f.diff()),
+            Self::Add(f, g) => Self::Add(f.diff(), g.diff()),
+            Self::Sub(f, g) => Self::Sub(f.diff(), g.diff()),
+            Self::Mul(f, g) => Self::Add(
+                Box::new(Self::Mul(f.diff(), g.clone())),
+                Box::new(Self::Mul(f.clone(), g.diff())),
+            ),
+            Self::Div(f, g) => Self::Div(
+                Box::new(Self::Sub(
+                    Box::new(Self::Mul(f.diff(), g.clone())),
+                    Box::new(Self::Mul(f.clone(), g.diff())),
+                )),
+                Box::new(Self::Mul(g.clone(), g.clone())),
+            ),
+            Self::Comp(f, g) => Self::Mul(
+                Box::new(Self::Comp(f.diff(), g.clone())),
+                g.diff(),
+            ),
+        }
     }
 }
 
@@ -240,38 +323,62 @@ pub trait Evaluate {
 }
 
 impl Evaluate for Rational {
-    fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+    fn evaluate(&self, _x: f64) -> f64 {
+        (self.numerator as f64) / (self.denominator as f64)
     }
 }
 
 impl Evaluate for SingletonPolynomial {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            Self::Const(c) => c.evaluate(x),
+            Self::Polynomial { coeff, power } => coeff.evaluate(x) * x.powf(power.evaluate(x)),
+        }
     }
 }
 
 impl Evaluate for Exp {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        x.exp()
     }
 }
 
 impl Evaluate for Trignometric {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            Self::Sine { coeff } => coeff.evaluate(x) * x.sin(),
+            Self::Cosine { coeff } => coeff.evaluate(x) * x.cos(),
+        }
     }
 }
 
 impl Evaluate for BaseFuncs {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            Self::Const(c) => c.evaluate(x),
+            Self::Poly(p) => p.evaluate(x),
+            Self::Exp(e) => e.evaluate(x),
+            Self::Trig(t) => t.evaluate(x),
+        }
+    }
+}
+
+impl<F: Evaluate> Evaluate for Box<F> {
+    fn evaluate(&self, x: f64) -> f64 {
+        (**self).evaluate(x)
     }
 }
 
 impl<F: Evaluate> Evaluate for ComplexFuncs<F> {
     fn evaluate(&self, x: f64) -> f64 {
-        todo!()
+        match self {
+            Self::Func(f) => f.evaluate(x),
+            Self::Add(f, g) => f.evaluate(x) + g.evaluate(x),
+            Self::Sub(f, g) => f.evaluate(x) - g.evaluate(x),
+            Self::Mul(f, g) => f.evaluate(x) * g.evaluate(x),
+            Self::Div(f, g) => f.evaluate(x) / g.evaluate(x),
+            Self::Comp(f, g) => f.evaluate(g.evaluate(x)),
+        }
     }
 }
 
@@ -326,8 +433,8 @@ impl fmt::Display for Exp {
 impl fmt::Display for Trignometric {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (func, coeff) = match self {
-            Trignometric::Sine { coeff } => ("sin(x)", coeff),
-            Trignometric::Cosine { coeff } => ("cos(x)", coeff),
+            Self::Sine { coeff } => ("sin(x)", coeff),
+            Self::Cosine { coeff } => ("cos(x)", coeff),
         };
 
         if *coeff == ZERO {
