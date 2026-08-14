@@ -24,7 +24,11 @@ impl<T, S> Iterator for Generator<T, S> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let result = (self.f)(&mut self.state);
+        match result {
+            Yielded::Value(v) => Some(v),
+            Yielded::Stop => None,
+        }
     }
 }
 
@@ -32,12 +36,37 @@ impl<T, S> Iterator for Generator<T, S> {
 ///
 /// HINT: Consult <https://en.wikipedia.org/wiki/Fibonacci_sequence>
 pub fn fib_generator(first: usize, second: usize) -> Generator<usize, (usize, usize)> {
-    todo!()
+    Generator {
+        state: (first, second),
+        f: |state| {
+            let (curr, next) = *state;
+            *state = (next, curr + next);
+            Yielded::Value(curr)
+        },
+    }
 }
 
 /// Returns a generator that yields collatz numbers.
 ///
 /// HINT: Consult <https://en.wikipedia.org/wiki/Collatz_conjecture>
 pub fn collatz_conjecture(start: usize) -> Generator<usize, usize> {
-    todo!()
+    Generator {
+        state: start,
+        f: |state| {
+            if *state == 0 {
+                Yielded::Stop
+            } else if *state == 1 {
+                *state = 0;
+                Yielded::Value(1)
+            } else {
+                let current = *state;
+                *state = if current % 2 == 0 {
+                    current / 2
+                } else {
+                    3 * current + 1
+                };
+                Yielded::Value(current)
+            }
+        },
+    }
 }

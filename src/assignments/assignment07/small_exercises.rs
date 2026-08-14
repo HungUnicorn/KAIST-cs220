@@ -10,7 +10,14 @@ impl<T: Eq> Iterator for FindIter<'_, T> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        while self.curr + self.query.len() <= self.base.len() {
+            let idx = self.curr;
+            self.curr += 1;
+            if &self.base[idx..idx + self.query.len()] == self.query {
+                return Some(idx);
+            }
+        }
+        None
     }
 }
 
@@ -25,13 +32,16 @@ pub fn find<'s, T: Eq>(query: &'s [T], base: &'s [T]) -> impl 's + Iterator<Item
 
 /// Implement generic fibonacci iterator
 struct FibIter<T> {
-    // TODO: remove `_marker` and add necessary fields as you want
-    _marker: std::marker::PhantomData<T>,
+    curr: T,
+    next: T,
 }
 
 impl<T: std::ops::Add<Output = T> + Copy> FibIter<T> {
     fn new(first: T, second: T) -> Self {
-        todo!()
+        Self {
+            curr: first,
+            next: second,
+        }
     }
 }
 
@@ -42,7 +52,10 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let current = self.curr;
+        self.curr = self.next;
+        self.next = current + self.curr;
+        Some(current)
     }
 }
 
@@ -53,8 +66,7 @@ pub fn fib<T>(first: T, second: T) -> impl Iterator<Item = T>
 where
     T: std::ops::Add<Output = T> + Copy,
 {
-    todo!("replace `std::iter::empty() with your own implementation`");
-    std::iter::empty()
+    FibIter::new(first, second)
 }
 
 /// Endpoint of range, inclusive or exclusive.
@@ -68,12 +80,36 @@ pub enum Endpoint {
 }
 
 struct RangeIter {
-    // TODO: add necessary fields as you want
+    curr: isize,
+    end: isize,
+    step: isize,
+    inclusive: bool,
 }
 
 impl RangeIter {
     fn new(endpoints: (Endpoint, Endpoint), step: isize) -> Self {
-        todo!()
+        let curr = match endpoints.0 {
+            Endpoint::Inclusive(val) => val,
+            Endpoint::Exclusive(val) => {
+                if step > 0 {
+                    val + 1
+                } else if step < 0 {
+                    val - 1
+                } else {
+                    val
+                }
+            }
+        };
+        let (end, inclusive) = match endpoints.1 {
+            Endpoint::Inclusive(val) => (val, true),
+            Endpoint::Exclusive(val) => (val, false),
+        };
+        Self {
+            curr,
+            end,
+            step,
+            inclusive,
+        }
     }
 }
 
@@ -81,14 +117,26 @@ impl Iterator for RangeIter {
     type Item = isize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        if self.step > 0 {
+            if self.inclusive && self.curr <= self.end || !self.inclusive && self.curr < self.end {
+                let current = self.curr;
+                self.curr += self.step;
+                return Some(current);
+            }
+        } else if self.step < 0 {
+            if self.inclusive && self.curr >= self.end || !self.inclusive && self.curr > self.end {
+                let current = self.curr;
+                self.curr += self.step;
+                return Some(current);
+            }
+        }
+        None
     }
 }
 
 /// Returns an iterator over the range [left, right) with the given step.
 pub fn range(left: Endpoint, right: Endpoint, step: isize) -> impl Iterator<Item = isize> {
-    todo!("replace `std::iter::empty() with your own implementation`");
-    std::iter::empty()
+    RangeIter::new((left, right), step)
 }
 
 /// Write an iterator that returns all divisors of n in increasing order.
@@ -100,14 +148,27 @@ pub fn range(left: Endpoint, right: Endpoint, step: isize) -> impl Iterator<Item
 /// then n/x is a divisor of n that is smaller than sqrt(n).
 struct Divisors {
     n: u64,
-    // TODO: you may define additional fields here
+    curr: u64,
+    saved: Vec<u64>,
 }
 
 impl Iterator for Divisors {
     type Item = u64;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        while self.curr * self.curr <= self.n {
+            if self.n % self.curr == 0 {
+                let current = self.curr;
+                if self.n / self.curr != self.curr {
+                    self.saved.push(self.n / self.curr);
+                }
+                self.curr += 1;
+                return Some(current);
+            }
+            self.curr += 1;
+        }
+
+        self.saved.pop()
     }
 }
 
@@ -115,6 +176,7 @@ impl Iterator for Divisors {
 pub fn divisors(n: u64) -> impl Iterator<Item = u64> {
     Divisors {
         n,
-        // TODO: you may define additional fields here
+        curr: 1,
+        saved: Vec::new(),
     }
 }

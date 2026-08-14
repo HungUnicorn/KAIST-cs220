@@ -6,8 +6,8 @@ use std::hash::Hash;
 /// Iterator that iterates over the given iterator and returns only unique elements.
 #[derive(Debug)]
 pub struct Unique<I: Iterator> {
-    // TODO: remove `_marker` and add necessary fields as you want
-    _marker: std::marker::PhantomData<I>,
+    iter: I,
+    seen: HashSet<I::Item>,
 }
 
 impl<I: Iterator> Iterator for Unique<I>
@@ -17,39 +17,53 @@ where
     type Item = I::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        while let Some(item) = self.iter.next() {
+            if self.seen.insert(item.clone()) {
+                return Some(item);
+            }
+        }
+        None
     }
 }
 
 /// Iterator that chains two iterators together.
 #[derive(Debug)]
 pub struct Chain<I1: Iterator, I2: Iterator> {
-    // TODO: remove `_marker` and add necessary fields as you want
-    _marker: std::marker::PhantomData<(I1, I2)>,
+    iter1: I1,
+    iter2: I2,
 }
 
-impl<T: Eq + Hash + Clone, I1: Iterator<Item = T>, I2: Iterator<Item = T>> Iterator
-    for Chain<I1, I2>
-{
-    type Item = T;
+impl<I1: Iterator, I2: Iterator<Item = I1::Item>> Iterator for Chain<I1, I2> {
+    type Item = I1::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        match self.iter1.next() {
+            Some(item) => Some(item),
+            None => self.iter2.next(),
+        }
     }
 }
 
 /// Iterator that iterates over given iterator and enumerates each element.
 #[derive(Debug)]
 pub struct Enumerate<I: Iterator> {
-    // TODO: remove `_marker` and add necessary fields as you want
-    _marker: std::marker::PhantomData<I>,
+    index: usize,
+    iter: I,
 }
 
 impl<I: Iterator> Iterator for Enumerate<I> {
     type Item = (usize, I::Item);
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let current = self.iter.next();
+
+        match current {
+            Some(item) => {
+                self.index += 1;
+                Some((self.index - 1, item))
+            }
+            None => None,
+        }
     }
 }
 
@@ -59,15 +73,21 @@ impl<I: Iterator> Iterator for Enumerate<I> {
 /// should be ignored.
 #[derive(Debug)]
 pub struct Zip<I1: Iterator, I2: Iterator> {
-    // TODO: remove `_marker` and add necessary fields as you want
-    _marker: std::marker::PhantomData<(I1, I2)>,
+    iter1: I1,
+    iter2: I2,
 }
 
 impl<I1: Iterator, I2: Iterator> Iterator for Zip<I1, I2> {
     type Item = (I1::Item, I2::Item);
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        let pair1 = self.iter1.next();
+        let pair2 = self.iter2.next();
+
+        match (pair1, pair2) {
+            (Some(pair1), Some(pair2)) => Some((pair1, pair2)),
+            _ => None,
+        }
     }
 }
 
@@ -78,7 +98,10 @@ pub trait MyIterTools: Iterator {
     where
         Self: Sized,
     {
-        todo!()
+        Unique {
+            iter: self,
+            seen: HashSet::new(),
+        }
     }
 
     /// Returns an iterator that chains `self` and `other` together.
@@ -86,7 +109,10 @@ pub trait MyIterTools: Iterator {
     where
         Self: Sized,
     {
-        todo!()
+        Chain {
+            iter1: self,
+            iter2: other,
+        }
     }
 
     /// Returns an iterator that iterates over `self` and enumerates each element.
@@ -94,7 +120,10 @@ pub trait MyIterTools: Iterator {
     where
         Self: Sized,
     {
-        todo!()
+        Enumerate {
+            index: 0,
+            iter: self,
+        }
     }
 
     /// Returns an iterator that zips `self` and `other` together.
@@ -102,7 +131,10 @@ pub trait MyIterTools: Iterator {
     where
         Self: Sized,
     {
-        todo!()
+        Zip {
+            iter1: self,
+            iter2: other,
+        }
     }
 
     /// Foldleft for `MyIterTools`
@@ -111,7 +143,11 @@ pub trait MyIterTools: Iterator {
         Self: Sized,
         F: FnMut(Self::Item, T) -> T,
     {
-        todo!()
+        let mut accumulator = init;
+        while let Some(item) = self.next() {
+            accumulator = f(item, accumulator);
+        }
+        accumulator
     }
 }
 
