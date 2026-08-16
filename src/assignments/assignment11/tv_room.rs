@@ -56,12 +56,22 @@ impl TVRoom {
     ///
     /// Returns `None` if the TV room is already opened.
     pub fn open(&self) -> Option<Manager<'_>> {
-        todo!()
+        let mut state = self.state.borrow_mut();
+        match *state {
+            TVRoomState::Closed => {
+                *state = TVRoomState::Opened;
+                Some(Manager::new(&self.state))
+            }
+            TVRoomState::Opened => None,
+        }
     }
 
     /// Returns whether the TV room is opened or not.
     pub fn is_opened(&self) -> bool {
-        todo!()
+        match *self.state.borrow() {
+            TVRoomState::Opened => true,
+            TVRoomState::Closed => false,
+        }
     }
 }
 
@@ -84,7 +94,9 @@ impl<'a> Manager<'a> {
 
     /// Adds new guest to the TV room.
     pub fn new_guest(&self) -> Guest<'a> {
-        todo!()
+        Guest {
+            inner: Rc::clone(&self.inner),
+        }
     }
 }
 
@@ -108,6 +120,6 @@ impl<'a> Watcher<'a> {
 impl Drop for Watcher<'_> {
     fn drop(&mut self) {
         // When the last person leaves the TV room, the TV room should be closed.
-        todo!()
+        *self.tvstate.borrow_mut() = TVRoomState::Closed;
     }
 }

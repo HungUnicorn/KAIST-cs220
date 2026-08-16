@@ -13,7 +13,8 @@
 //! Refer `graph_grade.rs` for test cases.
 
 use std::cell::RefCell;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::hash::{Hash, Hasher};
 use std::rc::Rc;
 
 #[derive(PartialEq, Eq, Debug)]
@@ -31,7 +32,13 @@ enum VisitStatus {
 ///
 /// You can freely add fields to this struct.
 #[derive(Debug, Clone)]
-pub struct NodeHandle;
+pub struct NodeHandle(Rc<RefCell<Node>>);
+
+#[derive(Debug)]
+struct Node {
+    value: i32,
+    edges: Vec<NodeHandle>,
+}
 
 /// Error type for graph operations.
 #[derive(Debug)]
@@ -41,12 +48,17 @@ pub struct GraphError;
 ///
 /// You can freely add fields to this struct.
 #[derive(Debug)]
-pub struct SubGraph;
+pub struct SubGraph {
+    nodes: HashSet<NodeHandle>,
+}
 
 impl NodeHandle {
     /// Creates a node and returns the handle to it.
     pub fn new(value: i32) -> Self {
-        todo!()
+        Self(Rc::new(RefCell::new(Node {
+            value,
+            edges: vec![],
+        })))
     }
 
     /// Adds an edge to `to`.
@@ -54,7 +66,13 @@ impl NodeHandle {
     /// `Err(GraphError)`. Returns `Ok(true)` if the edge is successfully added.
     /// Returns `Ok(false)` if an edge to `to` already exits.
     pub fn add_edge(&self, to: NodeHandle) -> Result<bool, GraphError> {
-        todo!()
+        let mut node = self.0.try_borrow_mut().map_err(|_| GraphError)?;
+        if node.edges.contains(&to) {
+            return Ok(false);
+        }
+
+        node.edges.push(to);
+        Ok(true)
     }
 
     /// Removes the edge to `to`.
@@ -62,14 +80,36 @@ impl NodeHandle {
     /// `Err(GraphError)`. Returns `Ok(true)` if the edge is successfully removed.
     /// Returns `Ok(false)` if an edge to `to` does not exist.
     pub fn remove_edge(&self, to: &NodeHandle) -> Result<bool, GraphError> {
-        todo!()
+        let mut node = self.0.try_borrow_mut().map_err(|_| GraphError)?;
+        if let Some(index) = node.edges.iter().position(|e| e == to) {
+            drop(node.edges.remove(index));
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 
     /// Removes all edges.
     /// If the modification cannot be done, e.g. because of aliasing issues, returns
     /// `Err(GraphError)`.
     pub fn clear_edges(&self) -> Result<(), GraphError> {
-        todo!()
+        let mut node = self.0.try_borrow_mut().map_err(|_| GraphError)?;
+        node.edges.clear();
+        Ok(())
+    }
+}
+
+impl PartialEq for NodeHandle {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Eq for NodeHandle {}
+
+impl Hash for NodeHandle {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        Rc::as_ptr(&self.0).hash(state);
     }
 }
 
@@ -82,22 +122,65 @@ impl Default for SubGraph {
 impl SubGraph {
     /// Creates a new subgraph.
     pub fn new() -> Self {
-        todo!()
+        SubGraph {
+            nodes: HashSet::new(),
+        }
     }
 
     /// Adds a node to the subgraph. Returns true iff the node is newly added.
     pub fn add_node(&mut self, node: NodeHandle) -> bool {
-        todo!()
+        self.nodes.insert(node)
     }
 
     /// Removes a node from the subgraph. Returns true iff the node is successfully removed.
     pub fn remove_node(&mut self, node: &NodeHandle) -> bool {
-        todo!()
+        self.nodes.remove(node)
     }
 
     /// Returns true iff the subgraph contains a cycle. Nodes that do not belong to this subgraph
     /// are ignored. See <https://en.wikipedia.org/wiki/Cycle_(graph_theory)> for an algorithm.
     pub fn detect_cycle(&self) -> bool {
-        todo!()
+        let mut status = HashMap::<NodeHandle, VisitStatus>::new();
+
+        for node in &self.nodes {
+            if status.get(node) != Some(&VisitStatus::Visited) {
+                if Self::dfs(node, &self.nodes, &mut status) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn dfs(
+        current: &NodeHandle,
+        subgraph_nodes: &HashSet<NodeHandle>,
+        status: &mut HashMap<NodeHandle, VisitStatus>,
+    ) -> bool {
+        let _ = status.insert(current.clone(), VisitStatus::Visiting);
+
+        let node_ref = current.0.borrow();
+
+        for neighbor in &node_ref.edges {
+            if !subgraph_nodes.contains(neighbor) {
+                continue;
+            }
+
+            match status.get(neighbor) {
+                Some(VisitStatus::Visiting) => {
+                    return true;
+                }
+                Some(VisitStatus::Visited) => {
+                    continue;
+                }
+                Some(VisitStatus::Unvisited) | None => {
+                    if Self::dfs(neighbor, subgraph_nodes, status) {
+                        return true;
+                    }
+                }
+            }
+        }
+        let _ = status.insert(current.clone(), VisitStatus::Visited);
+        false
     }
 }

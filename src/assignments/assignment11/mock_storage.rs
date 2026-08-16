@@ -47,15 +47,23 @@ pub trait Storage {
 
 impl Storage for MockStorage {
     fn upload(&self, name: &str, size: usize) -> Result<(), usize> {
-        todo!()
+        let old_size = self.files.borrow().get(name).copied().unwrap_or(0);
+        let new_used = self.used() + size - old_size;
+
+        if self.capacity < new_used {
+            return Err(new_used - self.capacity);
+        }
+
+        let _ = self.files.borrow_mut().insert(name.to_string(), size);
+        Ok(())
     }
 
     fn used(&self) -> usize {
-        todo!()
+        self.files.borrow().values().sum()
     }
 
     fn capacity(&self) -> usize {
-        todo!()
+        self.capacity
     }
 }
 
@@ -75,7 +83,7 @@ impl<'a, T: Storage> FileUploader<'a, T> {
 
     /// Uploads a file to the internal storage.
     pub fn upload(&self, name: &str, size: usize) -> Result<(), usize> {
-        todo!()
+        self.storage.upload(name, size)
     }
 }
 
@@ -94,6 +102,7 @@ impl<'a, T: Storage> UsageAnalyzer<'a, T> {
 
     /// Returns `true` if the usage of the internal storage is under the bound.
     pub fn is_usage_under_bound(&self) -> bool {
-        todo!()
+        let used_ratio = self.storage.used() as f64 / self.storage.capacity() as f64;
+        used_ratio < self.bound
     }
 }
