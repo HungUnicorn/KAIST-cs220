@@ -35,17 +35,24 @@ pub fn zero<T: 'static>() -> Church<T> {
 
 /// Implement a function to add 1 to a given Church numeral.
 pub fn succ<T: 'static>(n: Church<T>) -> Church<T> {
-    todo!()
+    Rc::new(move |f| {
+        let n_f = n(f.clone());
+        Rc::new(move |x| f(n_f(x)))
+    })
 }
 
 /// Implement a function to add two Church numerals.
 pub fn add<T: 'static>(n: Church<T>, m: Church<T>) -> Church<T> {
-    todo!()
+    Rc::new(move |f| {
+        let n_f = n(f.clone());
+        let m_f = m(f.clone());
+        Rc::new(move |x| m_f(n_f(x)))
+    })
 }
 
 /// Implement a function to multiply (mult) two Church numerals.
 pub fn mult<T: 'static>(n: Church<T>, m: Church<T>) -> Church<T> {
-    todo!()
+    Rc::new(move |f| n(m(f)))
 }
 
 /// Implement a function to raise one Church numeral to the power of another.
@@ -56,18 +63,37 @@ pub fn mult<T: 'static>(n: Church<T>, m: Church<T>) -> Church<T> {
 /// base). Note: This function should be implemented *WITHOUT* using the `to_usize` or any
 /// `pow`-like method.
 pub fn exp<T: 'static>(n: usize, m: usize) -> Church<T> {
-    // ACTION ITEM: Uncomment the following lines and replace `todo!()` with your code.
-    // let n = from_usize(n);
-    // let m = from_usize(m);
-    todo!()
+    let m = from_usize::<Rc<dyn Fn(T) -> T>>(m);
+    let n = from_usize::<T>(n);
+    m(n)
 }
 
 /// Implement a function to convert a Church numeral to a usize type.
 pub fn to_usize<T: 'static + Default>(n: Church<T>) -> usize {
-    todo!()
+    let counter = Rc::new(RefCell::new(0_usize));
+    let counter_clone = counter.clone();
+
+    let f = Rc::new(move |val: T| {
+        *counter_clone.borrow_mut() += 1;
+        val
+    });
+
+    let initial = T::default();
+    let n_f = n(f);
+    let _unused = n_f(initial);
+    let result = *counter.borrow();
+    result
 }
 
 /// Implement a function to convert a usize type to a Church numeral.
 pub fn from_usize<T: 'static>(n: usize) -> Church<T> {
-    todo!()
+    Rc::new(move |f| {
+        let f = f.clone();
+        Rc::new(move |mut x| {
+            for _ in 0..n {
+                x = f(x);
+            }
+            x
+        })
+    })
 }
