@@ -308,10 +308,7 @@ impl<F: Differentiable> Differentiable for ComplexFuncs<F> {
                 )),
                 Box::new(Self::Mul(g.clone(), g.clone())),
             ),
-            Self::Comp(f, g) => Self::Mul(
-                Box::new(Self::Comp(f.diff(), g.clone())),
-                g.diff(),
-            ),
+            Self::Comp(f, g) => Self::Mul(Box::new(Self::Comp(f.diff(), g.clone())), g.diff()),
         }
     }
 }

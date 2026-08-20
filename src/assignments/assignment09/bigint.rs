@@ -38,7 +38,7 @@ pub struct BigInt {
 impl BigInt {
     /// Create a new `BigInt` from a `usize`.
     pub fn new(n: u32) -> Self {
-        todo!()
+        Self { carrier: vec![n] }
     }
 
     /// Creates a new `BigInt` from a `Vec<u32>`.
@@ -48,7 +48,7 @@ impl BigInt {
     /// Panics if `carrier` is empty.
     pub fn new_large(carrier: Vec<u32>) -> Self {
         assert!(!carrier.is_empty());
-        todo!()
+        Self { carrier }.truncate()
     }
 }
 
@@ -57,17 +57,50 @@ const SIGN_MASK: u32 = 1 << 31;
 impl BigInt {
     /// Extend `self` to `len` bits.
     fn sign_extension(&self, len: usize) -> Self {
-        todo!()
+        if len <= self.carrier.len() {
+            return self.clone();
+        }
+
+        let diff = len - self.carrier.len();
+        let pad_val = if (self.carrier[0] & SIGN_MASK) != 0 {
+            u32::MAX
+        } else {
+            0
+        };
+
+        let mut new_carrier = vec![pad_val; diff];
+        new_carrier.extend_from_slice(&self.carrier);
+
+        Self {
+            carrier: new_carrier,
+        }
     }
 
     /// Compute the two's complement of `self`.
     fn two_complement(&self) -> Self {
-        todo!()
+        let inverted: Vec<u32> = self.carrier.iter().map(|&x| !x).collect();
+        let inverted_bigint = BigInt::new_large(inverted);
+        inverted_bigint + BigInt::new(1)
     }
 
     /// Truncate a `BigInt` to the minimum length.
     fn truncate(&self) -> Self {
-        todo!()
+        let mut slice = &self.carrier[..];
+
+        while let [first, second, ..] = slice {
+            let redundant_zero = *first == 0 && (second & SIGN_MASK) == 0;
+            let redundant_neg = *first == u32::MAX && (second & SIGN_MASK) != 0;
+
+            if redundant_zero || redundant_neg {
+                slice = &slice[1..];
+            } else {
+                break;
+            }
+        }
+
+        Self {
+            carrier: slice.to_vec(),
+        }
     }
 }
 
@@ -75,7 +108,22 @@ impl Add for BigInt {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        todo!()
+        let target_len = self.carrier.len().max(rhs.carrier.len()) + 1;
+        let s_ext = self.sign_extension(target_len).carrier;
+        let r_ext = rhs.sign_extension(target_len).carrier;
+
+        let mut res = vec![0u32; target_len];
+        let mut carry = 0;
+
+        for i in (0..target_len).rev() {
+            let sum = (s_ext[i] as u64) + (r_ext[i] as u64) + carry;
+
+            res[i] = sum as u32;
+
+            carry = sum >> 32
+        }
+
+        BigInt::new_large(res)
     }
 }
 
@@ -83,7 +131,7 @@ impl Sub for BigInt {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        todo!()
+        self.add(rhs.two_complement())
     }
 }
 
