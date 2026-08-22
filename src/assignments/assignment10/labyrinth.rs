@@ -18,7 +18,11 @@ pub struct Husband {
 impl Husband {
     /// What might a husband, who is looking for his wife's ID my_wife, be thinking?
     pub fn seeking(my_wife: usize) -> Self {
-        todo!()
+        let mut brain = [0; 100];
+        brain[0] = my_wife;
+        Self {
+            brain: RefCell::new(brain),
+        }
     }
 
     #[allow(missing_docs)]
@@ -29,7 +33,7 @@ impl Husband {
     /// Based on the information about currently visited room number and someone's wife ID trapped
     /// inside, what the husband should do next?
     pub fn carefully_checks_whos_inside(&self, room: usize, wife: usize) {
-        todo!()
+        self.brain.borrow_mut()[0] = wife;
     }
 }
 
@@ -43,6 +47,6 @@ impl Iterator for Strategy<'_> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        Some(self.husband.brain.borrow()[0])
     }
 }

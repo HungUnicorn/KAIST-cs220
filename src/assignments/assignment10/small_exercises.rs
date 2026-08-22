@@ -1,6 +1,6 @@
 //! Small exercises.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use itertools::*;
 
@@ -17,7 +17,10 @@ use itertools::*;
 ///
 /// Consult <https://en.wikipedia.org/wiki/Inversion_(discrete_mathematics)> for more details of inversion.
 pub fn inversion<T: Ord>(inner: Vec<T>) -> Vec<(usize, usize)> {
-    todo!()
+    (0..inner.len())
+        .tuple_combinations()
+        .filter(|&(i, j)| inner[i] > inner[j])
+        .collect()
 }
 
 /// Represents a node of tree data structure.
@@ -68,7 +71,16 @@ pub enum Node<T> {
 ///
 /// is `1 -> 2 -> 5 -> 6 -> 3 -> 4 -> 7 -> 8 -> 9`.
 pub fn traverse_preorder<T>(root: Node<T>) -> Vec<T> {
-    todo!()
+    match root {
+        Node::NonLeaf((name, children)) => {
+            let mut result = vec![name];
+            for child in children {
+                result.extend(traverse_preorder(child));
+            }
+            result
+        }
+        Node::Leaf(name) => vec![name],
+    }
 }
 
 /// File
@@ -114,7 +126,27 @@ pub enum File {
 /// Output: `[("a1", 1), ("a2", 3), ("b1", 3), ("a", 4), ("c", 8), ("b2", 15), ("b", 18), ("root",
 /// 30)]`
 pub fn du_sort(root: &File) -> Vec<(&str, usize)> {
-    todo!()
+    let mut results = Vec::new();
+    let _ = calculate_sizes(root, &mut results);
+    results.sort_by_key(|&(name, size)| (size, name));
+    results
+}
+
+fn calculate_sizes<'a>(file: &'a File, results: &mut Vec<(&'a str, usize)>) -> usize {
+    match file {
+        File::Data(name, size) => {
+            results.push((name, *size));
+            *size
+        }
+        File::Directory(name, children) => {
+            let mut size = 0;
+            for child in children {
+                size += calculate_sizes(child, results);
+            }
+            results.push((name, size));
+            size
+        }
+    }
 }
 
 /// Remove all even numbers inside a vector using the given mutable reference.
@@ -129,7 +161,7 @@ pub fn du_sort(root: &File) -> Vec<(&str, usize)> {
 /// ```
 #[allow(clippy::ptr_arg)]
 pub fn remove_even(inner: &mut Vec<i64>) {
-    todo!()
+    inner.retain(|&x| x % 2 != 0);
 }
 
 /// Remove all duplicate occurences of a number inside the array.
@@ -146,7 +178,8 @@ pub fn remove_even(inner: &mut Vec<i64>) {
 /// ```
 #[allow(clippy::ptr_arg)]
 pub fn remove_duplicate(inner: &mut Vec<i64>) {
-    todo!()
+    let mut seen = HashSet::new();
+    inner.retain(|&x| seen.insert(x));
 }
 
 /// Returns the natural join of two tables using the first column as the join argument.
@@ -172,15 +205,45 @@ pub fn remove_duplicate(inner: &mut Vec<i64>) {
 ///  20231234 |    Mike   |     ME
 /// ```
 pub fn natural_join(table1: Vec<Vec<String>>, table2: Vec<Vec<String>>) -> Vec<Vec<String>> {
-    todo!()
+    let mut map: HashMap<String, Vec<Vec<String>>> = HashMap::new();
+    for mut row2 in table2 {
+        let key = row2.remove(0);
+        map.entry(key).or_default().push(row2);
+    }
+
+    let mut result = Vec::new();
+
+    for row1 in table1 {
+        if let Some(matching_rows) = map.get(&row1[0]) {
+            for raw2_tail in matching_rows {
+                let mut combined_row = row1.clone();
+                combined_row.extend(raw2_tail.clone());
+                result.push(combined_row);
+            }
+        }
+    }
+
+    result
 }
 
 /// You can freely add more fields.
-struct Pythagorean;
+struct Pythagorean {
+    c: u64,
+    a: u64,
+}
 
 impl Pythagorean {
     fn new() -> Self {
-        todo!()
+        Self { c: 5, a: 1 }
+    }
+
+    fn a_exceeds_upper_bound(&self, a: u64) -> bool {
+        2 * a * a >= self.c * self.c
+    }
+
+    fn advance_to_next_c(&mut self) {
+        self.c += 1;
+        self.a = 1;
     }
 }
 
@@ -188,8 +251,41 @@ impl Iterator for Pythagorean {
     type Item = (u64, u64, u64);
 
     fn next(&mut self) -> Option<Self::Item> {
-        todo!()
+        loop {
+            let a = self.a;
+            self.a += 1;
+
+            if self.a_exceeds_upper_bound(a) {
+                self.advance_to_next_c();
+                continue;
+            }
+
+            let b_squared = self.c * self.c - a * a;
+            if let Some(b) = exact_sqrt(b_squared) {
+                if are_coprime(a, b) {
+                    return Some((a, b, self.c));
+                }
+            }
+        }
     }
+}
+
+fn exact_sqrt(n: u64) -> Option<u64> {
+    let root = (n as f64).sqrt().round() as u64;
+    (root * root == n).then_some(root)
+}
+
+fn are_coprime(a: u64, b: u64) -> bool {
+    gcd(a, b) == 1
+}
+
+fn gcd(mut a: u64, mut b: u64) -> u64 {
+    while b != 0 {
+        let temp = b;
+        b = a % b;
+        a = temp;
+    }
+    a
 }
 
 /// Generates sequence of unique [primitive Pythagorean triples](https://en.wikipedia.org/wiki/Pythagorean_triple),
