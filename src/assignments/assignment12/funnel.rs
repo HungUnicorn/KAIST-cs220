@@ -7,8 +7,7 @@
 //!
 //! Refer to `funnel_grade.rs` for test cases.
 
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender};
 use std::thread;
 use std::thread::JoinHandle;
 
@@ -19,5 +18,19 @@ where
     T: Send + 'static,
     F: Send + Sync + Fn(&T) -> bool + 'static,
 {
-    todo!()
+    thread::spawn(move || {
+        thread::scope(|s| {
+            for rx in rxs {
+                let tx = tx.clone();
+                let f = &f;
+                let _h = s.spawn(move || {
+                    for value in rx {
+                        if f(&value) && tx.send(value).is_err() {
+                            break;
+                        }
+                    }
+                });
+            }
+        });
+    })
 }

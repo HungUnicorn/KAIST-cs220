@@ -45,6 +45,14 @@ impl Player {
 
     /// This function should return the index of the card to flip and the color to change to.
     pub fn flip_card_strategy(&mut self) -> (usize, Color) {
-        todo!()
+        let count = self.memory.entry(0).or_insert(0);
+        *count = (*count + 1) % 10000;
+
+        let idx = *count as usize;
+        if idx % 4 == 0 {
+            (idx, Color::Blue)
+        } else {
+            (idx, Color::White)
+        }
     }
 }
