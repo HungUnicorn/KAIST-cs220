@@ -19,7 +19,7 @@ pub fn sigma_par<T, F: Fn(T) -> i64 + Sync + Send>(
     inner: impl ParallelIterator<Item = T>,
     f: F,
 ) -> i64 {
-    todo!()
+    inner.map(f).sum()
 }
 
 /// Alternate elements from three iterators until they have run out.
@@ -40,7 +40,10 @@ pub fn interleave3_par<T: Send>(
     list2: impl IndexedParallelIterator<Item = T>,
     list3: impl IndexedParallelIterator<Item = T>,
 ) -> Vec<T> {
-    todo!()
+    list1
+        .zip(list2.zip(list3))
+        .flat_map(|(a, (b, c))| [a, b, c])
+        .collect()
 }
 
 /// Parallel vector addition
@@ -56,7 +59,10 @@ pub fn interleave3_par<T: Send>(
 /// assert_eq!(res, vec![2.0, 4.0, 6.0, 8.0, 10.0]);
 /// ```
 pub fn vec_add_par(lhs: &[f64], rhs: &[f64]) -> Vec<f64> {
-    todo!()
+    lhs.par_iter()
+        .zip(rhs.par_iter())
+        .map(|(a, b)| a + b)
+        .collect()
 }
 
 /// Parallel dot product of two arrays
@@ -76,7 +82,7 @@ pub fn vec_add_par(lhs: &[f64], rhs: &[f64]) -> Vec<f64> {
 /// assert_eq!(res, 55.0);
 /// ```
 pub fn dot_product_par(lhs: &[f64], rhs: &[f64]) -> f64 {
-    todo!()
+    lhs.par_iter().zip(rhs.par_iter()).map(|(a, b)| a * b).sum()
 }
 
 /// Parallel Matrix multiplication
@@ -109,5 +115,11 @@ pub fn dot_product_par(lhs: &[f64], rhs: &[f64]) -> f64 {
 /// assert_eq!(ans, res);
 /// ```
 pub fn matmul_par(lhs: &[Vec<f64>], rhs: &[Vec<f64>]) -> Vec<Vec<f64>> {
-    todo!()
+    lhs.par_iter()
+        .map(|row_l| {
+            rhs.iter()
+                .map(|row_r| row_l.iter().zip(row_r.iter()).map(|(a, b)| a * b).sum())
+                .collect()
+        })
+        .collect()
 }

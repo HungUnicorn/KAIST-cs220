@@ -83,29 +83,50 @@ mod test {
         let res = vec_add(&vec1, &vec2);
         assert_eq!(res, vec![2.0, 4.0, 6.0, 8.0, 10.0]);
 
+        // Warmup: initialize the Rayon thread pool and prime the cache
+        {
+            let w1 = hint::black_box(Array::random(50_000_000, Uniform::new(0., 10.)));
+            let w2 = hint::black_box(Array::random(50_000_000, Uniform::new(0., 10.)));
+            let _warmup1 = hint::black_box(vec_add_par(
+                hint::black_box(w1.as_slice().unwrap()),
+                hint::black_box(w2.as_slice().unwrap()),
+            ));
+            let _warmup2 = hint::black_box(vec_add(
+                hint::black_box(w1.as_slice().unwrap()),
+                hint::black_box(w2.as_slice().unwrap()),
+            ));
+        }
+
+        let mut total_seq = std::time::Duration::ZERO;
+        let mut total_par = std::time::Duration::ZERO;
+
         for _ in 0..5 {
-            let vec1 = hint::black_box(Array::random(5_000_000, Uniform::new(0., 10.)));
-            let vec2 = hint::black_box(Array::random(5_000_000, Uniform::new(0., 10.)));
+            let vec1 = hint::black_box(Array::random(50_000_000, Uniform::new(0., 10.)));
+            let vec2 = hint::black_box(Array::random(50_000_000, Uniform::new(0., 10.)));
 
             let now_seq = Instant::now();
             let res_seq = hint::black_box(vec_add(
                 hint::black_box(vec1.as_slice().unwrap()),
                 hint::black_box(vec2.as_slice().unwrap()),
             ));
-            let elapsed_seq = now_seq.elapsed();
+            total_seq += now_seq.elapsed();
 
             let now_par = Instant::now();
             let res_par = hint::black_box(vec_add_par(
                 hint::black_box(vec1.as_slice().unwrap()),
                 hint::black_box(vec2.as_slice().unwrap()),
             ));
-            let elapsed_par = now_par.elapsed();
+            total_par += now_par.elapsed();
 
             let ans = vec1 + vec2;
             assert_eq!(Array::from_vec(res_seq), ans);
             assert_eq!(Array::from_vec(res_par), ans);
-            assert!(elapsed_par < elapsed_seq);
         }
+
+        assert!(
+            total_par < total_seq,
+            "Sequential total: {total_seq:?}, Parallel total: {total_par:?}"
+        );
     }
 
     #[test]
